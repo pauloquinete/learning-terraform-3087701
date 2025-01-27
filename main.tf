@@ -3,7 +3,7 @@ data "aws_ami" "app_ami" {
 
   filter {
     name   = "name"
-    values = [var.ami_filter.name]
+    values = var.ami_filter.name
   }
 
   filter {
@@ -11,9 +11,8 @@ data "aws_ami" "app_ami" {
     values = ["hvm"]
   }
 
-  owners = [var.ami_filter.owner] # Bitnami
+  owners = var.ami_filter.owner
 }
-
 
 module "blog_vpc" {
   source = "terraform-aws-modules/vpc/aws"
@@ -38,8 +37,8 @@ module "blog_autoscaling" {
 
   name = "blog"
 
-  min_size            = var.asg_min
-  max_size            = var.asg_max
+  min_size            = var.asg_min_size
+  max_size            = var.asg_max_size
   vpc_zone_identifier = module.blog_vpc.public_subnets
   target_group_arns   = module.blog_alb.target_group_arns
   security_groups     = [module.blog_sg.security_group_id]
@@ -61,7 +60,7 @@ module "blog_alb" {
 
   target_groups = [
     {
-      name_prefix      = "blog-"
+      name_prefix      = "${var.environment.name}-"
       backend_protocol = "HTTP"
       backend_port     = 80
       target_type      = "instance"
@@ -77,7 +76,7 @@ module "blog_alb" {
   ]
 
   tags = {
-    Environment = "dev"
+    Environment = var.environment.name
   }
 }
 
@@ -86,7 +85,7 @@ module "blog_sg" {
   version = "4.13.0"
 
   vpc_id  = module.blog_vpc.vpc_id
-  name    = "blog"
+  name    = "${var.environment.name}-blog"
   ingress_rules = ["https-443-tcp","http-80-tcp"]
   ingress_cidr_blocks = ["0.0.0.0/0"]
   egress_rules = ["all-all"]
